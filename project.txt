@@ -1,0 +1,43 @@
+import cv2
+import firebase_admin
+from firebase_admin import credentials, storage
+
+# กำหนด Firebase credentials จากไฟล์บนคอมพิวเตอร์ของคุณ
+cred = credentials.Certificate("path/to/your/firebase_credentials.json")
+firebase_admin.initialize_app(cred, {'storageBucket': 'your-firebase-storage-bucket'})
+
+# เปิดกล้อง webcam (เลือกหมายเลข 0 หากมีกล้องหลายตัว)
+cap = cv2.VideoCapture(0)
+
+while True:
+    # อ่านภาพจากกล้อง
+    ret, frame = cap.read()
+
+    # แสดงภาพที่ได้จากกล้อง
+    cv2.imshow('Webcam', frame)
+
+    # รอการกดปุ่ม 'q' เพื่อออกจาก loop
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        # ส่งรูปภาพไปยัง Firebase Storage
+        upload_image(frame, 'webcam_image.jpg')
+        break
+
+# ปิดกล้อง
+cap.release()
+
+# ปิดหน้าต่างที่แสดงภาพ
+cv2.destroyAllWindows()
+
+def upload_image(image, filename):
+    # ส่งรูปภาพไปยัง Firebase Storage
+    bucket = storage.bucket()
+    blob = bucket.blob(filename)
+
+    # แปลงรูปภาพเป็น bytes
+    _, image_encoded = cv2.imencode('.jpg', image)
+    image_bytes = image_encoded.tobytes()
+
+    # อัปโหลดไฟล์ไปยัง Firebase Storage
+    blob.upload_from_string(image_bytes, content_type='image/jpg')
+
+    print(f'Image {filename} uploaded to Firebase Storage')
